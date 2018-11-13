@@ -1,5 +1,6 @@
 package br.com.heider.firebasebaas
 
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
@@ -16,25 +17,44 @@ import com.google.firebase.database.ValueEventListener
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var userId: String
+
+    private lateinit var mAuth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        escutarMudancaNoFirebase()
+        mAuth = FirebaseAuth.getInstance()
 
-        btLigar.setOnClickListener {
-            onOff(1)
+        userId = FirebaseAuth.getInstance().currentUser!!.uid
+
+        etSerialNumber.setText("ZrjeAW4jgf9LdqW5oBBBsNHp7sXATLBR")
+
+        ivStatus.setOnClickListener {
+            if (ivStatus.drawable.constantState == ContextCompat.getDrawable(this, R.drawable.desligada)?.constantState) {
+                onOff(1)
+            } else {
+                onOff(0)
+            }
         }
 
-        btDesligar.setOnClickListener {
+        btRegistrarDevice.setOnClickListener {
             onOff(0)
+            escutarMudancaNoFirebase()
+        }
+
+        btLogout.setOnClickListener {
+            mAuth.signOut()
+            finish()
+            startActivity(Intent(this@MainActivity, LoginActivity::class.java))
         }
     }
 
     private fun escutarMudancaNoFirebase() {
-        // Read from the database
+
         FirebaseDatabase.getInstance().getReference("Coisas")
-            .child(FirebaseAuth.getInstance().currentUser!!.uid)
+            .child(etSerialNumber.text.toString())
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     val coisa = dataSnapshot.getValue(CoisaDigital::class.java)
@@ -66,13 +86,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun onOff(valor: Int) {
         FirebaseDatabase.getInstance().getReference("Coisas")
-            .child(FirebaseAuth.getInstance().currentUser!!.uid)
-            .setValue(CoisaDigital("LED", valor))
+            .child(etSerialNumber.text.toString())
+            .setValue(CoisaDigital("LED", valor, userId))
             .addOnCompleteListener {
                 if (it.isSuccessful) {
                     Toast.makeText(this, "Comando executado com sucesso!", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Erro ao criar o usuário", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, it.exception?.message, Toast.LENGTH_SHORT).show()
                 }
             }
     }
